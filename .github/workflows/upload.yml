@@ -1,0 +1,61 @@
+name: MultiCloudupload  
+on:
+  workflow_dispatch:
+    inputs:
+      Directlink:
+        description: 'Enter DirectLink To Download ⚡️'
+        required: true
+      Filename:
+        description: 'Enter File name with extension👁️‍ '
+        required: true
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+#kindevilsorg
+    steps:
+      - uses: actions/checkout@v3
+#kindevilsorg
+      - name: Download Directlink
+        run: |
+            echo "Downloading File ⚡️"
+            aria2c -x 16 -o "${{ github.event.inputs.Filename }}" "${{ github.event.inputs.Directlink }}"
+#kindevilsorg
+      - name: Upload 
+        run: |
+          echo "👁️‍🗨️Downloading the file and Uploading to 3 Different servers👁️‍🗨️"
+          if [ -f "${{ github.event.inputs.Filename }}" ]; then
+            filesize=$(stat -c%s "${{ github.event.inputs.Filename }}")
+            if ((filesize > 5000000000)); then
+              echo "Error: The file size exceeds the 5 GB limit." >>condition.txt
+            else
+              echo "File exists and its size is acceptable. Continuing to upload." >>condition.txt
+            fi
+          else
+            echo "Error: The specified file does not exist." >>condition.txt
+          fi
+
+          if [ -f "condition.txt" ] && grep -q "File exists and its size is acceptable. Continuing to upload." "condition.txt"; then
+            sudo apt install jq -y && curl -F "file=@${{ github.event.inputs.Filename }}" https://api.anonfiles.com/upload >>outputs.txt && curl -F "file=@${{ github.event.inputs.Filename }}" https://api.letsupload.cc/upload >>outputs1.txt && curl -F "file=@${{ github.event.inputs.Filename }}" https://api.filechan.org/upload >>outputs2.txt
+          else
+            if [ -f "condition.txt" ] && grep -q "Error: The file size exceeds the 5 GB limit." "condition.txt"; then
+              echo "File upload skipped due to file size limit."
+            else
+              echo "condition.txt"
+            fi
+          fi
+
+      - name: Click To View 
+        run: |
+            
+                if grep -q "Error" "condition.txt"; then
+                  cat condition.txt
+                else
+                  for f in outputs.txt outputs1.txt outputs2.txt; do
+                    if grep -q '"full":' $f; then
+                      jq -r '.data.file.url.full' $f
+                    else
+                      echo "No valid response in $f"
+                    fi
+                  done
+                  echo "LONG LIVE KINDEVILS"
+                fi
